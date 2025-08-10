@@ -1,0 +1,18 @@
+{
+  "title": "Greetings",
+  "turns": [
+    {
+      "id": "t1",
+      "question": "Introduce yourself by name.",
+      "canonical": "Hello, my name is Alice.",
+      "keywords": ["hello","my","name","is"],
+      "accept": ["hello my name is alice"]
+    },
+    {
+      "id": "t2",
+      "question": "Ask how the other person is doing.",
+      "canonical": "How are you?",
+      "keywords": ["how","are","you"]
+    }
+  ]
+}

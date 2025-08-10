@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Moonshine Trainer</title>
+    <style>
+      body { margin:0; font:16px/1.4 system-ui, sans-serif; }
+      .wrap { display:grid; grid-template-columns: 1fr 320px; gap:24px; padding:20px; }
+      h2 { margin:.2rem 0 .6rem; }
+      #left, #right { padding:16px; border:1px solid #ddd; border-radius:12px; }
+      #liveTranscript { min-height:1.4em; white-space:pre-wrap; padding:.4rem .6rem; background:#f6f6f6; border-radius:8px; }
+      #questionBox { min-height:1.4em; }
+      #checklist li { list-style:none; margin:4px 0; padding-left:1.1em; position:relative; }
+      #checklist li > .mark { position:absolute; left:0; top:0; }
+      .row { display:flex; gap:8px; align-items:center; }
+      .row > * { flex:1; }
+      .row button { flex:0; }
+      label { font-weight:600; display:block; margin:.6rem 0 .25rem; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <section id="left">
+        <h2 id="scenarioTitle" style="margin:0 0 .5rem 0;"></h2>
+        <h2>Scene</h2>
+        <div id="questionBox"></div>
+
+        <label>Live transcript (≤30s)</label>
+        <div id="liveTranscript"></div>
+
+        <label for="typedResponse">Your response (optional)</label>
+        <div class="row">
+          <input id="typedResponse" type="text" placeholder="Type your answer..." disabled />
+          <button id="submitResponse" disabled>Submit</button>
+        </div>
+
+        <div class="row" style="margin-top:.8rem;">
+          <div id="progressLabel">0 / 0 correct</div>
+        </div>
+        <ol id="checklist"></ol>
+      </section>
+
+      <aside id="right">
+        <h2>Controls</h2>
+
+        <div class="row" style="margin-top:.8rem;">
+          <button id="btnRecord">Record</button>
+          <button id="btnStop" disabled>Stop</button>
+        </div>
+        <label for="scenarioSelect">Scenario</label>
+        <select id="scenarioSelect"></select>
+                  <select name="models" id="models">
+            <option value="tiny" selected>moonshine/tiny</option>
+            <option value="base">moonshine/base</option>
+          </select>  
+      </aside>
+    </div>
+
+    <script type="module" src="/src/index.js"></script>
+  </body>
+</html>
