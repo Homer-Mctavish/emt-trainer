@@ -58,5 +58,9 @@
     </div>
 
     <script type="module" src="/src/index.js"></script>
+    <div id="loadingOverlay" style="position:fixed;inset:0;background:#fff;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:.5rem;z-index:9999;">
+  <div id="loadingMsg">Loading speech model…</div>
+  <progress id="loadingBar" max="100" value="0" style="width:320px"></progress>
+</div>
   </body>
 </html>
