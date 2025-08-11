@@ -1,4 +1,3 @@
 [
-  { "id": "greetings", "title": "Greetings", "file": "/scenarios/greetings.json" },
   { "id": "trauma station", "title": "Trauma Station", "file": "/scenarios/trauma.json" }
 ]

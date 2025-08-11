@@ -1,17 +1,22 @@
 import Moonshine from "./moonshine.js";
 
 /* ---------- Config ---------- */
-const MODEL_NAME_DEFAULT = "tiny";
 const MAX_RECORD_SEC = 30;
 const DECODE_INTERVAL_MS = 400;
 const SILENCE_RMS = 0.012;
 const SILENCE_FINALIZE_MS = 750;
 const SCENARIO_INDEX_URL = "/scenarios/index.json";
+const DEFAULT_RETRY1_AUDIO = "/audio/try_again_1.mp3";
+const DEFAULT_RETRY2_AUDIO = "/audio/try_again_2.mp3";
+const DEFAULT_THIRD_FAIL_AUDIO = "/audio/move_on.mp3";
+const DEFAULT_SUCCESS_AUDIO = "/audio/success.mp3";
+const KEYWORD_MIN_MATCH = 3;
 
 /* ---------- State ---------- */
 let moonshine;
 let currentScenario = null, turns = [];
 let turnIdx = 0, attemptsThisTurn = 0, correctCount = 0;
+let playingAudio = null;
 
 let streaming = false, decodeTimer = null, lastSpeechTs = 0, recordStart = 0;
 let ctx, source, workletNode;
@@ -33,7 +38,40 @@ const elRec = () => document.getElementById("btnRecord");
 const elStop = () => document.getElementById("btnStop");
 const elScenario = () => document.getElementById("scenarioSelect");
 
+document.getElementById("scenarioTitle").textContent =
+  currentScenario?.title || elScenario().selectedOptions[0]?.textContent || "Scenario";
+
+
 /* ---------- UI helpers ---------- */
+
+function playAudioCue(urlOrNull, ttsFallback) {
+  // Stop any previous cue
+  if (playingAudio) {
+    try { playingAudio.pause(); } catch (_) {}
+    playingAudio = null;
+  }
+  if (urlOrNull) {
+    try {
+      const a = new Audio(urlOrNull);
+      a.play().catch(() => ttsFallback && speak(ttsFallback));
+      playingAudio = a;
+      return;
+    } catch { /* fall back */ }
+  }
+  if (ttsFallback) speak(ttsFallback);
+}
+
+
+function getScenarioAudio() {
+  const a = currentScenario?.audio || {};
+  return {
+    retry1:   a.retry1   || DEFAULT_RETRY1_AUDIO,
+    retry2:   a.retry2   || DEFAULT_RETRY2_AUDIO,
+    thirdFail:a.thirdFail|| DEFAULT_THIRD_FAIL_AUDIO,
+    success:  a.success  || DEFAULT_SUCCESS_AUDIO,   // <-- NEW
+  };
+}
+
 function setQuestion(t) { elQ().textContent = t || ""; }
 function setLiveTranscript(t) { elLive().textContent = t || ""; }
 function setTypedEnabled(on) { elType().disabled = elSubmit().disabled = !on; }
@@ -118,32 +156,69 @@ async function startStreaming() {
 }
 
 async function stopStreaming(finalize=false) {
-  if (!streaming) return;
+  if (!streaming && !finalize) return;
   streaming = false;
+
   if (decodeTimer) { clearInterval(decodeTimer); decodeTimer = null; }
   if (workletNode) { workletNode.disconnect(); workletNode = null; }
   if (source) { source.disconnect(); source = null; }
   if (ctx) { await ctx.close(); ctx = null; }
 
-  elRec().disabled = false; elStop().disabled = true;
+  elRec().disabled = false;
+  elStop().disabled = true;
 
-  if (finalize) {
-    const buf = ringReadWindow(); ringClear();
-    const finalText = buf.length ? (await moonshine.generate(buf)) : "";
-    onAttemptFinished(finalText || "");
+  if (!finalize) return;
+
+  // Final decode -> auto-"submit"
+  const buf = ringReadWindow();
+  ringClear();
+
+  let finalText = "";
+  try {
+    finalText = buf.length ? (await moonshine.generate(buf)) : "";
+  } catch (e) {
+    console.error("final decode error:", e);
   }
+
+  // Populate typed field and trigger the same path as a manual submit
+  elType().value = finalText || "";
+  // Disable then re-enable to ensure the click is allowed
+  elSubmit().disabled = false;
+  elSubmit().click();
 }
+
 
 /* ---------- evaluation & flow ---------- */
 function normalize(s) { return (s||"").toLowerCase().replace(/[^\w\s']/g," ").replace(/\s+/g," ").trim(); }
 
+
 function isCorrectAnswer(text, turn) {
   const t = normalize(text);
-  if (Array.isArray(turn.accept)) for (const p of turn.accept) if (t.includes(normalize(p))) return true;
-  if (Array.isArray(turn.keywords)) if (turn.keywords.every(kw => t.includes(normalize(kw)))) return true;
-  if (turn.canonical && t === normalize(turn.canonical)) return true;
+
+  // 1) Accept list: any phrase match wins
+  if (Array.isArray(turn.accept) && turn.accept.length) {
+    if (turn.accept.some(p => t.includes(normalize(p)))) return true;
+  }
+
+  // 2) Keywords: need >= threshold hits (substring matches)
+  if (Array.isArray(turn.keywords) && turn.keywords.length) {
+    const uniqKeywords = [...new Set(turn.keywords.map(normalize))].filter(Boolean);
+    const hits = uniqKeywords.reduce((n, kw) => n + (t.includes(kw) ? 1 : 0), 0);
+
+    // If there are fewer than 3 keywords, require all of them; otherwise require >=3
+  const scenarioMin = currentScenario?.keywordsMinMatch ?? KEYWORD_MIN_MATCH;
+  const turnMin = turn?.keywordsMinMatch ?? scenarioMin;
+  const threshold = Math.min(turnMin, uniqKeywords.length);
+
+    if (hits >= threshold) return true;
+  }
+
+  // 3) Canonical: relaxed exact match
+  if (turn.canonical && normalize(turn.canonical) === t) return true;
+
   return false;
 }
+
 
 function speak(text) {
   if (!window.speechSynthesis) return;
@@ -153,30 +228,64 @@ function speak(text) {
 }
 
 function onAttemptFinished(transcribed) {
+  // Show what we heard; allow manual edit+submit too
   setLiveTranscript(transcribed);
   elType().value = transcribed;
   setTypedEnabled(true);
 
   attemptsThisTurn += 1;
+
   const turn = turns[turnIdx];
   const ok = isCorrectAnswer(transcribed, turn);
+  const cues = getScenarioAudio();
 
   if (ok) {
     correctCount += 1;
     markChecklist(turnIdx, true);
     updateProgressUI();
-    speak("Correct.");
+    playAudioCue(getScenarioAudio().success, "Correct.");  // TTS fallback if you want a spoken "Correct."
     nextTurn();
-  } else if (attemptsThisTurn >= 3) {
-    markChecklist(turnIdx, false);
-    updateProgressUI();
-    if (turn.canonical) speak(`The correct answer is: ${turn.canonical}`);
-    nextTurn();
-  } else {
-    const left = 3 - attemptsThisTurn;
-    speak(`Not quite. Try again. You have ${left} ${left===1?"attempt":"attempts"} left.`);
+    return;
   }
+
+  // Wrong answers
+  if (attemptsThisTurn === 1) {
+    playAudioCue(cues.retry1, "Not quite. Try again.");
+    return; // stay on same turn; user may re-record or type and submit
+  }
+
+  if (attemptsThisTurn === 2) {
+    playAudioCue(cues.retry2, "Almost. Try once more.");
+    return;
+  }
+
+  // Third strike: play a different cue, reveal canonical, mark fail, and move on
+  playAudioCue(cues.thirdFail, "Let's move on.");
+  markChecklist(turnIdx, false);
+  updateProgressUI();
+
+ if (turn.canonical) {
+   // 1) Speak it (as before)
+   speak(`The correct answer is: ${turn.canonical}`);
+
+   // 2) SHOW it temporarily in the live transcript area
+   setLiveTranscript(`Correct: ${turn.canonical}`);
+
+   // 3) Persist it under this turn in the checklist for later review
+   const li = document.querySelector(`#checklist li[data-turn="${turnIdx}"]`);
+   if (li && !li.querySelector('.canonical')) {
+     const reveal = document.createElement('div');
+     reveal.className = 'canonical';
+     reveal.style.opacity = '0.8';
+     reveal.style.fontStyle = 'italic';
+     reveal.textContent = `Correct: ${turn.canonical}`;
+     li.appendChild(reveal);
+   }
+ }
+ // Give the user a moment to read, then advance
+ setTimeout(() => nextTurn(), 1200);
 }
+
 
 function nextTurn() {
   setTypedEnabled(false);
@@ -215,6 +324,9 @@ function initChecklist(ts) {
   correctCount = 0; updateProgressUI();
 }
 
+
+
+
 /* ---------- boot ---------- */
 
 window.onload = async () => {
@@ -229,6 +341,7 @@ window.onload = async () => {
     setQuestion("")
     setControlsEnabled(true)
   });
+  
 
   models.onchange = async function(e) {
     var selection = document.getElementById("models").value
@@ -269,13 +382,19 @@ window.onload = async () => {
   }
 
   setControlsEnabled(true);
-
+  currentScenario = await loadScenarioById(elScenario().value || idx[0].id, idx);
+  turns = currentScenario.turns; turnIdx = 0; attemptsThisTurn = 0; correctCount = 0;
+  document.getElementById("scenarioTitle").textContent =
+  currentScenario?.title || elScenario().selectedOptions[0]?.textContent || "Scenario";
+  initChecklist(turns);
   // Handlers
   elScenario().addEventListener("change", async () => {
     if (streaming) return;
     setControlsEnabled(false);
     currentScenario = await loadScenarioById(elScenario().value, idx);
     turns = currentScenario.turns; turnIdx = 0; attemptsThisTurn = 0; correctCount = 0;
+    document.getElementById("scenarioTitle").textContent =
+    currentScenario?.title || elScenario().selectedOptions[0]?.textContent || "Scenario";
     initChecklist(turns);
     if (turns.length) { setQuestion(turns[0].question || "Turn 1"); speak(turns[0].question || ""); }
     else setQuestion("This scenario has no turns.");

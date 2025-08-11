@@ -1,89 +1,109 @@
 {
   "title": "Shooting Victim",
+    "audio": {
+    "retry1": "/audio/try_again_1.mp3",
+    "retry2": "/audio/try_again_1.mp3",
+    "thirdFail": "/audio/try_again_2.mp3",
+    "success": "/audio/success.mp3"
+  },
   "turns": [
     {
       "id": "t1",
       "question": "steps 1 and 2 of 6 (SMANS)",
       "canonical": "I have my ppe on, Scene Size up is my scene safe?",
-      "keywords": ["I","have","my", "ppe","on","scene","size","up","is", "safe"]
+      "keywords": ["I","have","my", "ppe","on","scene","size","up","is", "safe"],
+      "keywordsMinMatch": 3
     },
     {
       "id": "t2",
       "question": "step 3 of 6 (SMANS)",
       "canonical": "what's the mechanism of injury?",
-      "keywords": ["mechanism","of","injury"]
+      "keywords": ["mechanism","of","injury"],
+      "keywordsMinMatch": 2
     },
     {
       "id": "t3",
       "question": "step 4 of 6 (SMANS)",
       "canonical": "is this my only patient?",
-      "keywords": ["how","many","patients","is","this", "my","only","patient"]
+      "keywords": ["how","many","patients","is","this", "my","only","patient"],
+      "keywordsMinMatch": 3
     },
     {
       "id": "t4",
       "question": "step 5 of 6 (SMANS)",
       "canonical": "I'm calling for als backup.",
-      "keywords": ["backup","ALS","name","is", "calling"]
+      "keywords": ["backup","ALS","name","is", "calling"],
+      "keywordsMinMatch": 2
     },
     {
       "id": "t5",
       "question": "step 6 of 6 (SMANS)",
       "canonical": "I'm directing my partner to manually stabilize c-spine",
-      "keywords": ["manually","stabilize","c","cspine","spine"]
+      "keywords": ["manually","stabilize","c","cspine","spine"],
+      "keywordsMinMatch": 2
     },
     {
       "id": "t6",
       "question": "step 1 of 3",
       "canonical": "my general impression is that the patient is in poor condition",
-      "keywords": ["condition","poor","patient","impression","general"]
+      "keywords": ["condition","poor","patient","impression","general"],
+      "keywordsMinMatch": 2
     },
     {
       "id": "t7",
       "question": "step 2 of 3",
       "canonical": "I introduce myself and asses level of responsiveness specifically avpu what's your name? where are you from?",
-      "keywords": ["hello","month","what","where","avpu", "I'm","from", "name", "level", "of", "responsiveness"]
+      "keywords": ["hello","month","what","where","avpu", "I'm","from", "name", "level", "of", "responsiveness"],
+      "keywordsMinMatch": 2
     },
     {
       "id": "t8",
       "question": "step 3 of 3",
       "canonical": "establishing chief complaints and looking for any life threats",
-      "keywords": ["establishing","chief","complaints","life","threats","establish"]
+      "keywords": ["establishing","chief","complaints","life","threats","establish"],
+      "keywordsMinMatch": 2
     },
     {
       "id": "t9",
       "question": "three letter acronym 1 of 3 ",
       "canonical": "checking airway for any obstructions, instructing partner to use jaw thrust technique",
-      "keywords": ["partner","obstructions","blockage","airway","thrust","jaw","assessing", "breathing", "adequate"]
+      "keywords": ["partner","obstructions","blockage","airway","thrust","jaw","assessing", "breathing", "adequate"],
+      "keywordsMinMatch": 2
     },
     {
       "id": "t10",
       "question": "three letter acronym 2 of 3",
       "canonical": "checking for adequate breathing, bilateral ches rise and fall, assessing rate rythm and quality",
-      "keywords": ["checking","breathing","chest","bilateral","rise","fall","rate","rythm","quality","assessing"]
+      "keywords": ["checking","breathing","chest","bilateral","rise","fall","rate","rythm","quality","assessing"],
+      "keywordsMinMatch": 2
     },
     {
       "id": "t11",
       "question": "three letter acronym 3 of 3 (part 1)",
       "canonical": "checking circulation for radial pulse rate rhythm and quality, skin color temperature and condition",
-      "keywords": ["circulation","quality","rhythm","rate","pulse","radial","skin", "color", "temperature","condition"]
+      "keywords": ["circulation","quality","rhythm","rate","pulse","radial","skin", "color", "temperature","condition"],
+      "keywordsMinMatch": 2
     },
     {
       "id": "t12",
       "question": "three letter acronym 3 of 3 (part 2)",
       "canonical": "providing blanket, supplying oxygen via non rebreather mask at 15 liters per minute",
-      "keywords": ["circulation","quality","rhythm","rate","pulse","radial","skin", "color", "temperature","condition"]
+      "keywords": ["circulation","quality","rhythm","rate","pulse","radial","skin", "color", "temperature","condition"],
+      "keywordsMinMatch": 2
     },
     {
       "id": "t13",
       "question": "after 3 letter acronym",
       "canonical": "Making the decision to transport patient,given they are critical I am deciding to transport them and labeling them high priority",
-      "keywords": ["high","priority","transport","patient","critical","decide","state"]
+      "keywords": ["high","priority","transport","patient","critical","decide","state"],
+      "keywordsMinMatch": 2
     },
     {
       "id": "t14",
       "question": "next step",
       "canonical": "investigating the chief complaint and obtaining sample history from patient or bystanders. that's signs and symptoms allergies, medications, past medical history, last oral intake, events leading up to the injury",
-      "keywords": ["obtaining","getting","complaint","chief", "bystanders", "sample","signs","symptoms","allergies","medications","past","medical","history","last","oral","intake","events","leading","up","injury"]
+      "keywords": ["obtaining","getting","complaint","chief", "bystanders", "sample","signs","symptoms","allergies","medications","past","medical","history","last","oral","intake","events","leading","up","injury"],
+      "keywordsMinMatch": 2
     },
     {
       "id": "t15",
@@ -95,25 +115,29 @@
       "id": "t16",
       "question": "secondary assesment step 1:the head",
       "canonical": "I'm going to look for dcapbtls at the patients cranium, checking the maxilla and mandible, checking the eyes with a flashlight for perrl or racoon eyes, checking the nose and ears for any csf or bleeding, ears for battle signs reassesing the airway to mke sure its patent",
-      "keywords": ["dcapbtls","pearl","csf","bleeding","racoon","perrl","eyes","battle","signs"]
+      "keywords": ["dcapbtls","pearl","csf","bleeding","racoon","perrl","eyes","battle","signs"],
+      "keywordsMinMatch": 2
     },
     {
       "id": "t17",
       "question": "secondary assesment step 2:the neck area",
       "canonical": "checking patients neck for any step down, check the tracea for misalignment or jugular vein distention, assessing the top of the shoulders for any dcapbtls.",
-      "keywords": ["vein","jugular","dcapbtls", "step","patient","cervical","collar","misalignment", "distention","tracea"]
+      "keywords": ["vein","jugular","dcapbtls", "step","patient","cervical","collar","misalignment", "distention","tracea"],
+      "keywordsMinMatch": 2
     },
     {
       "id": "t18",
       "question": "secondary assesment step 3: the chest",
       "canonical": "I'm going to look for dcapbtls at the patients chest, checking the sternum for any chopping motion, looking for flail chest and assessing sucking chest wound.asculating lungs looking for lung sounds",
-      "keywords": ["chest","sucking","motion","chopping","dcapbtls","chest","flail", "wound"]
+      "keywords": ["chest","sucking","motion","chopping","dcapbtls","chest","flail", "wound"],
+      "keywordsMinMatch": 2
     },
     {
       "id": "t18",
       "question": "secondary assesment step 4: the abdomen",
       "canonical": "palpating all 4 quadrants of the abdomen looking for any dcapbtls. assessing the bladder, assesing the patient's pelvis by pressing in then down, doing a genital sweep looking for any dcapbtls",
-      "keywords": ["chest","sucking","motion","chopping","dcapbtls","chest","flail", " "]
+      "keywords": ["chest","sucking","motion","chopping","dcapbtls","chest","flail"],
+      "keywordsMinMatch": 2
     },
     {
       "id": "t4",
