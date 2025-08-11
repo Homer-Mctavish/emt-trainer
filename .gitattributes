@@ -1,1 +1,2 @@
+*.ort filter=lfs diff=lfs merge=lfs -text
 public/moonshine/**/*.ort filter=lfs diff=lfs merge=lfs -text
