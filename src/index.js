@@ -24,8 +24,10 @@ let ctx, source, workletNode;
 const WINDOW_SEC = 6;
 const ring = new Float32Array(16000 * WINDOW_SEC);
 let ringWrite = 0, ringFilled = 0;
-
+let modelReady = false;
+let modelPromise = null;
 let modelName;
+
 
 /* ---------- DOM ---------- */
 const elQ = () => document.getElementById("questionBox");
@@ -41,8 +43,33 @@ const elScenario = () => document.getElementById("scenarioSelect");
 document.getElementById("scenarioTitle").textContent =
   currentScenario?.title || elScenario().selectedOptions[0]?.textContent || "Scenario";
 
+  function onWorkletMessage(ev) {
+  if (ev?.data?.type !== 'pcm16k') return;
+  const frame = ev.data.data instanceof Float32Array
+    ? ev.data.data
+    : new Float32Array(ev.data.data);
+  ringWriteFrame(frame);
+  if (rms(frame) > SILENCE_RMS) lastSpeechTs = performance.now();
+}
 
 /* ---------- UI helpers ---------- */
+
+async function ensureModelReady() {
+  if (modelReady) return;
+  if (!modelPromise) modelPromise = moonshine.loadModel(progressHook);
+  await modelPromise;
+  modelReady = true;
+  document.getElementById('loadingOverlay').style.display = 'none';
+}
+
+// update overlay from Moonshine’s progress callbacks
+function progressHook({ msg, pct }) {
+  const bar = document.getElementById('loadingBar');
+  const lbl = document.getElementById('loadingMsg');
+  if (lbl && msg) lbl.textContent = msg;
+  if (bar && Number.isFinite(pct)) bar.value = Math.max(0, Math.min(100, pct));
+}
+
 
 function playAudioCue(urlOrNull, ttsFallback) {
   // Stop any previous cue
@@ -123,19 +150,20 @@ function rms(a) { let s=0; for (let i=0;i<a.length;i++) s += a[i]*a[i]; return M
 
 /* ---------- streaming ---------- */
 async function startStreaming() {
-  ctx = new (window.AudioContext||window.webkitAudioContext)({ sampleRate:48000 });
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1 } });
+  // if a previous ctx exists, close it first
+  if (ctx) { try { await ctx.close(); } catch {} ctx = null; }
+try{
+
+
+  ctx = new (window.AudioContext || window.webkitAudioContext)(); // no sampleRate arg
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1 }});
   source = ctx.createMediaStreamSource(stream);
 
-  await ctx.audioWorklet.addModule("/worklets/pcm-processor.js");
-  workletNode = new AudioWorkletNode(ctx, "pcm-processor", { numberOfInputs:1, numberOfOutputs:0 });
-  workletNode.port.onmessage = (ev) => {
-    if (ev.data?.type === "pcm16k") {
-      const frame = new Float32Array(ev.data.data);
-      ringWriteFrame(frame);
-      if (rms(frame) > SILENCE_RMS) lastSpeechTs = performance.now();
-    }
-  };
+  await ctx.audioWorklet.addModule(new URL('../worklets/pcm-processor.js', import.meta.url));
+  workletNode = new AudioWorkletNode(ctx, 'pcm-processor', { numberOfInputs: 1, numberOfOutputs: 0 });
+
+  // IMPORTANT: both source & workletNode belong to *ctx*
+  workletNode.port.onmessage = onWorkletMessage;
   source.connect(workletNode);
 
   lastSpeechTs = recordStart = performance.now();
@@ -153,9 +181,23 @@ async function startStreaming() {
     setLiveTranscript(text);
     if (text && (now - lastSpeechTs) > SILENCE_FINALIZE_MS) await stopStreaming(true);
   }, DECODE_INTERVAL_MS);
+  }catch(e){
+    console.error('startStreaming failed:', e);
+    // cleanup anything partially created
+    try { if (workletNode) workletNode.disconnect(); } catch (e) {}
+    try { if (source) source.disconnect(); } catch (e) {}
+    try { if (ctx) await ctx.close(); } catch (e) {}
+    workletNode = null; source = null; ctx = null;
+    throw e; // rethrow so caller can handle
+  }
 }
 
 async function stopStreaming(finalize=false) {
+  streaming = false;
+  try { if (workletNode) workletNode.disconnect(); } catch {}
+  try { if (source) source.disconnect(); } catch {}
+  workletNode = null; source = null;
+  if (ctx) { try { await ctx.close(); } catch {} ctx = null; }
   if (!streaming && !finalize) return;
   streaming = false;
 
@@ -337,10 +379,10 @@ window.onload = async () => {
   modelName = document.getElementById("models").value
   setQuestion("Loading " + modelName + "...")
   moonshine = new Moonshine(modelName)
-  moonshine.loadModel().then(() => {
-    setQuestion("")
-    setControlsEnabled(true)
-  });
+  // after you create moonshine = new Moonshine(MODEL_NAME_DEFAULT);
+  document.getElementById('loadingOverlay').style.display = 'flex';
+  modelPromise = moonshine.loadModel(progressHook).then(() => { modelReady = true; document.getElementById('loadingOverlay').style.display='none'; });
+
   
 
   models.onchange = async function(e) {
@@ -400,12 +442,28 @@ window.onload = async () => {
     else setQuestion("This scenario has no turns.");
     setControlsEnabled(true);
   });
-
-  elRec().addEventListener("click", () => startStreaming());
+let starting = false;
+elRec().addEventListener("click", async () => {
+  if (streaming || starting) return;
+  starting = true;
+  try {
+    await ensureModelReady();         // if you use the gating wrapper
+    await startStreaming();
+    streaming = true;
+  } catch (e) {
+    console.error(e);
+    await stopStreaming(false);       // ensure we’re clean if start failed
+  } finally {
+    starting = false;
+  }
+});
   elStop().addEventListener("click", () => stopStreaming(true));
-  elSubmit().addEventListener("click", () => {
-    const txt = elType().value || "";
-    setTypedEnabled(false);
-    onAttemptFinished(txt);
-  });
+
+elSubmit().addEventListener("click", async () => {
+  await ensureModelReady();
+  const txt = elType().value || "";
+  setTypedEnabled(false);
+  onAttemptFinished(txt);
+});
 };
+

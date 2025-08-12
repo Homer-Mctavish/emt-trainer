@@ -12,6 +12,8 @@ RUN pnpm install --frozen-lockfile
 # Build
 COPY . .
 RUN pnpm build
+RUN echo "---- PUBLIC ----" && ls -R /app/public | sed 's/^/PUBLIC: /'
+RUN echo "---- DIST ----"   && ls -R /app/dist   | sed 's/^/DIST:   /'
 
 # ---------- Runtime stage ----------
 FROM nginx:1.27-alpine AS runtime
@@ -22,6 +24,10 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Static files
 COPY --from=build /app/dist /usr/share/nginx/html
 
+# Ensure models are present at /moonshine/... no matter what Vite did
+COPY --from=build /app/public/moonshine /usr/share/nginx/html/moonshine
+RUN echo "---- PUBLIC ----" && ls -R /app/public | sed 's/^/PUBLIC: /'
+RUN echo "---- DIST ----"   && ls -R /app/dist   | sed 's/^/DIST:   /'
 # If you keep ORT WASM files outside Vite's public/ pipeline, copy them:
 # COPY public/ort /usr/share/nginx/html/ort
 
