@@ -1,12 +1,18 @@
 // moonshine.js
 import * as ort from 'onnxruntime-web';
 import llamaTokenizer from 'llama-tokenizer-js';
-
+// These imports produce hashed asset URLs like /assets/xxx.wasm
 // ---------- utils ----------
 function argMax(array) {
   return [].map.call(array, (x, i) => [x, i]).reduce((r, a) => (a[0] > r[0] ? a : r))[1];
 }
 const BASE = (import.meta?.env?.BASE_URL) || '/';   // robust if you deploy under a subpath
+
+
+
+
+
+// then create sessions…
 
 // Build the four URLs for a given model name ("tiny" | "base")
 function modelFileList(modelName) {
@@ -63,15 +69,18 @@ export default class Moonshine {
       cached_decode: undefined
     };
   }
-
   /**
    * Load all four .ort graphs in parallel with progress and caching.
    * @param {(info:{msg?:string,pct?:number})=>void} onProgress optional progress hook
    */
   async loadModel(onProgress) {
+          // 1) Map canonical filenames to the emitted URLs
+
+    // 3) SIMD is fine either way (Chrome supports SIMD), but you can leave true.
     // Configure ORT WASM runtime (adjust wasmPaths if you host /ort/*.wasm)
     // ort.env.wasm.wasmPaths = `${BASE}ort`;  // uncomment if you copy ORT wasm to /public/ort
     ort.env.wasm.simd = true;                 // enable SIMD when available
+
     // ort.env.wasm.numThreads = Math.min(4, navigator.hardwareConcurrency || 1); // optional
 
     const files = modelFileList(this.model_name);
