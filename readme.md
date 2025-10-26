@@ -1,6 +1,3 @@
-Here’s a **drop-in README.md** tailored to your repo — wired for Vite + vanilla JS, JSON dialogue trees, and an in-browser WASM speech model. It also documents the files already in your project (Vite config, Dockerfile, Fly.io config, nginx) so new contributors can hit the ground running.
-
----
 
 # EMT Trainer (Vite + Vanilla JS)
 
@@ -232,14 +229,6 @@ fly deploy
 * Audio stays **in-browser**; the V2T model runs as WASM in the page.
 * No analytics/telemetry are enabled by default — add them deliberately if needed.
 
----
-
-## Authoring Tips
-
-* Keep prompts **short** and expectations **generous** (list paraphrases).
-* Prefer **keywords** to allow natural speech; layer with **fuzzy** matching.
-* Provide **hints** after a miss to teach the expected phrase.
-* Validate critical captures (e.g., regex for names/IDs) before advancing.
 ---
 
 ## License
